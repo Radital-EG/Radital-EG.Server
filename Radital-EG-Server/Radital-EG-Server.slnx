@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Domain/Domain.csproj" />
+  <Project Path="HospitalRequestsAPI/HospitalRequestsAPI.csproj" />
+  <Project Path="Infrastructure/Infrastructure.csproj" />
+  <Project Path="RadiologistAPI/RadiologistAPI.csproj" />
+</Solution>
