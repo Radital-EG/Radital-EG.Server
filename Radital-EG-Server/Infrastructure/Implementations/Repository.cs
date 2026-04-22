@@ -362,26 +362,8 @@ namespace Infrastructure.Implementations
 
         public async Task<int> CommitAsync(Guid changeMakerID)
         {
-            //IEnumerable<EntityEntry> AuditableEntities = dbContext.ChangeTracker.Entries().Where(e => e.Entity is AuditableEntity<TKey> &&
-            //(e.State == EntityState.Added || e.State == EntityState.Modified));
-
-            //foreach(EntityEntry entityEntry in AuditableEntities)
-            //{
-            //    if(entityEntry.State == EntityState.Added)
-            //    {
-            //        ((AuditableEntity<TKey>)entityEntry.Entity).CreatedById = changeMakerID;
-            //        ((AuditableEntity<TKey>)entityEntry.Entity).CreatedAt = DateTime.Now;
-            //    }
-
-            //    else
-            //    {
-            //        ((AuditableEntity<TKey>)entityEntry.Entity).LastModifiedById = changeMakerID;
-            //        ((AuditableEntity<TKey>)entityEntry.Entity).LastModifiedAt = DateTime.Now;
-            //    }
-            //}
-            //int numberOfChanges = await dbContext.SaveChangesAsync();
-            //return numberOfChanges;
-            return 0;
+            int numberOfChanges = await dbContext.SaveChangesAsync();
+            return numberOfChanges;
         }
         protected virtual void Dispose(bool disposing)
         {
