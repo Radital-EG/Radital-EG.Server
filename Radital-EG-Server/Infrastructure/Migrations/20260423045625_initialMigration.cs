@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialMigration : Migration
+    public partial class initialMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -170,6 +170,7 @@ namespace Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false),
+                    RequestedById = table.Column<Guid>(type: "char(36)", nullable: false),
                     ImageId = table.Column<Guid>(type: "char(36)", nullable: false),
                     SuggestedDepartment = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
@@ -177,7 +178,7 @@ namespace Infrastructure.Migrations
                     DueDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                     Priority = table.Column<int>(type: "int", nullable: false),
                     AssignedRadiologistId = table.Column<Guid>(type: "char(36)", nullable: false),
-                    ReportId = table.Column<Guid>(type: "char(36)", nullable: false),
+                    ReportId = table.Column<Guid>(type: "char(36)", nullable: true),
                     IsEmergency = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     EmergencyJustification = table.Column<string>(type: "varchar(1000)", maxLength: 1000, nullable: false)
                 },
@@ -185,23 +186,29 @@ namespace Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_ReportingRequests", x => x.Id);
                     table.ForeignKey(
+                        name: "FK_ReportingRequests_HospitalStaffMembers_RequestedById",
+                        column: x => x.RequestedById,
+                        principalTable: "HospitalStaffMembers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
                         name: "FK_ReportingRequests_MedicalImages_ImageId",
                         column: x => x.ImageId,
                         principalTable: "MedicalImages",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_ReportingRequests_Radiologists_AssignedRadiologistId",
                         column: x => x.AssignedRadiologistId,
                         principalTable: "Radiologists",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_ReportingRequests_Reports_ReportId",
                         column: x => x.ReportId,
                         principalTable: "Reports",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.SetNull);
                 })
                 .Annotation("MySQL:Charset", "utf8mb4");
 
@@ -228,7 +235,13 @@ namespace Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_ReportingRequests_ReportId",
                 table: "ReportingRequests",
-                column: "ReportId");
+                column: "ReportId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReportingRequests_RequestedById",
+                table: "ReportingRequests",
+                column: "RequestedById");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Reports_AuthorId",
@@ -243,10 +256,10 @@ namespace Infrastructure.Migrations
                 name: "AvaliabilityTimes");
 
             migrationBuilder.DropTable(
-                name: "HospitalStaffMembers");
+                name: "ReportingRequests");
 
             migrationBuilder.DropTable(
-                name: "ReportingRequests");
+                name: "HospitalStaffMembers");
 
             migrationBuilder.DropTable(
                 name: "MedicalImages");

@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260423031949_v1")]
-    partial class v1
+    [Migration("20260423045625_initialMigration")]
+    partial class initialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -180,7 +180,7 @@ namespace Infrastructure.Migrations
                     b.Property<int>("Priority")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("ReportId")
+                    b.Property<Guid?>("ReportId")
                         .HasColumnType("char(36)");
 
                     b.Property<Guid>("RequestedById")
@@ -203,7 +203,8 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("ImageId");
 
-                    b.HasIndex("ReportId");
+                    b.HasIndex("ReportId")
+                        .IsUnique();
 
                     b.HasIndex("RequestedById");
 
@@ -316,25 +317,23 @@ namespace Infrastructure.Migrations
                     b.HasOne("Domain.People.Radiologist", "AssignedRadiologist")
                         .WithMany()
                         .HasForeignKey("AssignedRadiologistId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Domain.MedicalImage", "Image")
                         .WithMany()
                         .HasForeignKey("ImageId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Domain.Report", "Report")
-                        .WithMany()
-                        .HasForeignKey("ReportId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .WithOne()
+                        .HasForeignKey("Domain.ReportingRequest", "ReportId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Domain.People.HospitalStaffMember", "RequestedBy")
                         .WithMany()
                         .HasForeignKey("RequestedById")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("AssignedRadiologist");

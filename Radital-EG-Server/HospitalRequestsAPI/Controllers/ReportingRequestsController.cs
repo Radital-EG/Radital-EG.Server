@@ -43,6 +43,10 @@ namespace HospitalRequestsAPI.Controllers
                 _logger.LogWarning(ex, "Unauthorized request attempt");
                 return Unauthorized(new { message = ex.Message });
             }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });  
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating reporting request");

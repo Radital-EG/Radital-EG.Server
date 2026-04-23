@@ -84,6 +84,27 @@ namespace Infrastructure
             {
                 entity.Property(r => r.SuggestedDepartment).HasMaxLength(100);
                 entity.Property(r => r.EmergencyJustification).HasMaxLength(1000);
+
+                entity.HasOne(r => r.AssignedRadiologist)
+                      .WithMany()
+                      .IsRequired(false)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(r => r.Report)
+                      .WithOne()
+                      .HasForeignKey<ReportingRequest>(r => r.ReportId)  // Specify FK
+                      .IsRequired(false)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(r => r.Image)
+                      .WithMany()
+                      .IsRequired(true)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(r => r.RequestedBy)
+                      .WithMany()
+                      .IsRequired(true)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

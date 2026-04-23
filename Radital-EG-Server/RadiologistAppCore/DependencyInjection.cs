@@ -1,14 +1,11 @@
 ﻿using Domain.People;
-using HospitalRequestsAppCore.Interfaces;
-using HospitalRequestsAppCore.Services;
+using RadiologistAppCore.Interfaces;
+using RadiologistAppCore.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace HospitalRequestsAppCore
+namespace RadiologistAppCore
 {
     public static class DependencyInjection
     {
@@ -17,9 +14,7 @@ namespace HospitalRequestsAppCore
         /// </summary>
         public static IServiceCollection AddAppCoreServices(this IServiceCollection services)
         {
-            services.AddScoped<IReportingRequestsManagementService, ReportingRequestsManagementService>();
             services.AddScoped<IAuthenticationService, AuthenticationService>();
-            services.AddScoped<IPasswordHasher<HospitalStaffMember>, PasswordHasher<HospitalStaffMember>>();
             services.AddScoped<IPasswordHasher<Radiologist>, PasswordHasher<Radiologist>>();
 
             return services;

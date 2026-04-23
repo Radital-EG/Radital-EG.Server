@@ -23,6 +23,7 @@ namespace HospitalRequestsAppCore.DTOs
         public required string SuggestedDepartment { get; set; }
         public required PrioritiesEnum Priority { get; set; }
         public required DateTime DueDate { get; set; }
+        public required Guid AssignedRadiologistId { get; set; }
         public bool IsEmergency { get; set; } = false;
         public string EmergencyJustification { get; set; } = string.Empty;
     }

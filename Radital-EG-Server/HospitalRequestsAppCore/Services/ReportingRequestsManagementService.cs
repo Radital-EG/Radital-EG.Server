@@ -17,6 +17,7 @@ namespace HospitalRequestsAppCore.Services
         private readonly IRepository<HospitalStaffMember> _hospitalStaffMemberRepository;
         private readonly IRepository<Patient> _patientRepository;
         private readonly IRepository<MedicalImage> _imageRepository;
+        private readonly IRepository<Radiologist> _radiologistRepository;
         private readonly ILogger<ReportingRequestsManagementService> _logger;
 
         public ReportingRequestsManagementService(
@@ -24,12 +25,14 @@ namespace HospitalRequestsAppCore.Services
             IRepository<HospitalStaffMember> hospitalStaffMemberRepository,
             IRepository<Patient> patientRepository,
             IRepository<MedicalImage> imageRepository,
+            IRepository<Radiologist> radiologistRepository,
             ILogger<ReportingRequestsManagementService> logger)
         {
             _requestRepository = requestRepository;
             _hospitalStaffMemberRepository = hospitalStaffMemberRepository;
             _patientRepository = patientRepository;
             _imageRepository = imageRepository;
+            _radiologistRepository = radiologistRepository;
             _logger = logger;
         }
 
@@ -39,6 +42,17 @@ namespace HospitalRequestsAppCore.Services
             _logger.LogInformation("Creating new reporting request for patient: {PatientName}", dto.PatientName);
 
             var hospitalStaffMemberWhoRequestedTheImage = await _hospitalStaffMemberRepository.GetByIdAsync(requestedById);
+
+            Radiologist? assignedRadiologist = null;
+            assignedRadiologist = await _radiologistRepository.GetByIdAsync(dto.AssignedRadiologistId);
+            if (assignedRadiologist is null)
+            {
+                throw new KeyNotFoundException(
+                    $"Radiologist with Id '{dto.AssignedRadiologistId}' was not found.");
+            }
+
+            _logger.LogInformation("Assigning radiologist {RadiologistId} to request",
+                dto.AssignedRadiologistId);
 
             // 1. Create the patient record
             var patient = new Patient
@@ -78,6 +92,7 @@ namespace HospitalRequestsAppCore.Services
                 DueDate = dto.DueDate,
                 Priority = dto.Priority,
                 IsEmergency = dto.IsEmergency,
+                AssignedRadiologist = assignedRadiologist,
                 EmergencyJustification = dto.EmergencyJustification
             };
             await _requestRepository.InsertAsync(reportingRequest);
@@ -94,7 +109,7 @@ namespace HospitalRequestsAppCore.Services
 
             var requests = await _requestRepository.FindNestedSearchAsync(
                 filter: request => request.RequestedBy.Id == requestedById,
-                maxLevel: 2
+                maxLevel: 5
             );
 
             return requests.Select(MapToResponseDto);
@@ -105,7 +120,7 @@ namespace HospitalRequestsAppCore.Services
         {
             _logger.LogInformation("Fetching reporting request with Id: {RequestId}", id);
 
-            var request = await _requestRepository.GetByIdNestedSearchAsync(id, maxLevel: 2);
+            var request = await _requestRepository.GetByIdNestedSearchAsync(id, maxLevel: 5);
 
             if (request is null)
             {
@@ -133,16 +148,45 @@ namespace HospitalRequestsAppCore.Services
             return new ReportingRequestResponseDto
             {
                 Id = request.Id,
+
+                // --- Requested By ---
+                RequestedById = request.RequestedBy?.Id ?? Guid.Empty,
+                RequestedByName = request.RequestedBy?.Name ?? string.Empty,
+
+                // --- Patient ---
+                PatientId = request.Image?.Patient?.Id ?? Guid.Empty,
                 PatientName = request.Image?.Patient?.Name ?? string.Empty,
                 PatientDateOfBirth = request.Image?.Patient?.DateOfBirth ?? default,
+                PatientPhoneNumber = request.Image?.Patient?.PhoneNumber ?? string.Empty,
+                PatientGender = request.Image?.Patient?.Gender ?? default,
+                PatientAddress = request.Image?.Patient?.Address ?? string.Empty,
+                PatientMedicalHistory = request.Image?.Patient?.MedicalHistory,
+                PatientNotes = request.Image?.Patient?.Notes,
+
+                // --- Medical Image ---
+                MedicalImageId = request.Image?.Id ?? Guid.Empty,
                 ImageModality = request.Image?.ImageModality ?? default,
+                StorageReference = request.Image?.StorageReference ?? string.Empty,
+
+                // --- Request details ---
                 SuggestedDepartment = request.SuggestedDepartment ?? string.Empty,
                 Priority = request.Priority,
                 IsEmergency = request.IsEmergency,
+                EmergencyJustification = request.EmergencyJustification,
+
+                // --- Assigned Radiologist ---
+                AssignedRadiologistId = request.AssignedRadiologist?.Id,
+                AssignedRadiologistName = request.AssignedRadiologist?.Name,
+
+                // --- Report ---
+                ReportId = request.ReportId,
+
+                // --- Status ---
                 Status = request.Status,
                 SubmissionTime = request.SubmissionTime,
                 DueDate = request.DueDate
             };
         }
+
     }
 }

@@ -18,17 +18,40 @@ namespace Domain
 
     public enum SpecialityEnum
     {
-        // Add specialities as needed
+        General,
+        Neuroradiology,
+        CardiovascularRadiology,
+        PediatricRadiology,
+        MusculoskeletalRadiology,
+        AbdominalRadiology,
+        BreastImaging,
+        InterventionalRadiology,
+        NuclearMedicine,
+        EmergencyRadiology
     }
 
     public enum DepartmentsEnum
     {
-        // Add departments as needed
+        Radiology,
+        EmergencyDepartment,
+        Cardiology,
+        Neurology,
+        Orthopedics,
+        Pediatrics,
+        Oncology,
+        Surgery,
+        InternalMedicine,
+        ICU
     }
 
     public enum RolesEnum
     {
-        // Add roles as needed
+        Technician,
+        SeniorTechnician,
+        Nurse,
+        Receptionist,
+        DepartmentHead,
+        Administrator
     }
 
     public enum ImageModalitiesEnum

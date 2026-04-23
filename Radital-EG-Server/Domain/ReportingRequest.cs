@@ -15,7 +15,8 @@ namespace Domain
         public DateTime DueDate { get; set; }
         public PrioritiesEnum Priority { get; set; }
         public Radiologist AssignedRadiologist { get; set; }
-        public Report Report { get; set; }
+        public Guid? ReportId { get; set; }
+        public Report? Report { get; set; }
         public bool IsEmergency { get; set; }
         public string EmergencyJustification { get; set; }
     }
