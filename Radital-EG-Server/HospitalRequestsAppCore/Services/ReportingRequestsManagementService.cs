@@ -14,26 +14,31 @@ namespace HospitalRequestsAppCore.Services
     public class ReportingRequestsManagementService : IReportingRequestsManagementService
     {
         private readonly IRepository<ReportingRequest> _requestRepository;
+        private readonly IRepository<HospitalStaffMember> _hospitalStaffMemberRepository;
         private readonly IRepository<Patient> _patientRepository;
         private readonly IRepository<MedicalImage> _imageRepository;
         private readonly ILogger<ReportingRequestsManagementService> _logger;
 
         public ReportingRequestsManagementService(
             IRepository<ReportingRequest> requestRepository,
+            IRepository<HospitalStaffMember> hospitalStaffMemberRepository,
             IRepository<Patient> patientRepository,
             IRepository<MedicalImage> imageRepository,
             ILogger<ReportingRequestsManagementService> logger)
         {
             _requestRepository = requestRepository;
+            _hospitalStaffMemberRepository = hospitalStaffMemberRepository;
             _patientRepository = patientRepository;
             _imageRepository = imageRepository;
             _logger = logger;
         }
 
         /// <inheritdoc/>
-        public async Task<ReportingRequestResponseDto> CreateRequestAsync(CreateReportingRequestDto dto)
+        public async Task<ReportingRequestResponseDto> CreateRequestAsync(CreateReportingRequestDto dto, Guid requestedById)
         {
             _logger.LogInformation("Creating new reporting request for patient: {PatientName}", dto.PatientName);
+
+            var hospitalStaffMemberWhoRequestedTheImage = await _hospitalStaffMemberRepository.GetByIdAsync(requestedById);
 
             // 1. Create the patient record
             var patient = new Patient
@@ -64,6 +69,7 @@ namespace HospitalRequestsAppCore.Services
             // 3. Create the reporting request
             var reportingRequest = new ReportingRequest
             {
+                RequestedBy = hospitalStaffMemberWhoRequestedTheImage,
                 Id = Guid.NewGuid(),
                 Image = medicalImage,
                 SuggestedDepartment = dto.SuggestedDepartment,
@@ -82,27 +88,37 @@ namespace HospitalRequestsAppCore.Services
             return MapToResponseDto(reportingRequest);
         }
 
-        /// <inheritdoc/>
-        public async Task<IEnumerable<ReportingRequestResponseDto>> GetAllRequestsAsync()
+        public async Task<IEnumerable<ReportingRequestResponseDto>> GetAllRequestsAsync(Guid requestedById)
         {
-            _logger.LogInformation("Fetching all reporting requests");
+            _logger.LogInformation("Fetching all reporting requests for staff member: {StaffId}", requestedById);
 
-            var requests = await _requestRepository.GetAllNestedSearchAsync(maxLevel: 2);
+            var requests = await _requestRepository.FindNestedSearchAsync(
+                filter: request => request.RequestedBy.Id == requestedById,
+                maxLevel: 2
+            );
 
             return requests.Select(MapToResponseDto);
         }
 
         /// <inheritdoc/>
-        public async Task<ReportingRequestResponseDto?> GetRequestByIdAsync(Guid id)
+        public async Task<ReportingRequestResponseDto?> GetRequestByIdAsync(Guid id, Guid requestedById)
         {
             _logger.LogInformation("Fetching reporting request with Id: {RequestId}", id);
 
             var request = await _requestRepository.GetByIdNestedSearchAsync(id, maxLevel: 2);
 
-            if (request == null)
+            if (request is null)
             {
                 _logger.LogWarning("Reporting request with Id: {RequestId} was not found", id);
-                return null;
+                throw new KeyNotFoundException($"Reporting request with Id '{id}' was not found.");
+            }
+
+            if (request.RequestedBy.Id != requestedById)
+            {
+                _logger.LogWarning(
+                    "Staff member {StaffId} attempted to access reporting request {RequestId} owned by {OwnerId}",
+                    requestedById, id, request.RequestedBy.Id);
+                throw new UnauthorizedAccessException("You are not authorized to view this reporting request.");
             }
 
             return MapToResponseDto(request);

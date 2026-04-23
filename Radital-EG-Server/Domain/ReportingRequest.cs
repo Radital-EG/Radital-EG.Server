@@ -7,6 +7,7 @@ namespace Domain
 {
     public class ReportingRequest : IdentifiableEntity
     {
+        public HospitalStaffMember RequestedBy { get; set; }
         public MedicalImage Image { get; set; }
         public string SuggestedDepartment { get; set; }
         public ReportingRequestStatusEnum Status { get; set; }

@@ -1,6 +1,8 @@
 using HospitalRequestsAppCore.DTOs;
 using HospitalRequestsAppCore.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace HospitalRequestsAPI.Controllers
 {
@@ -19,13 +21,11 @@ namespace HospitalRequestsAPI.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// US-01: Create a new imaging / reporting request.
-        /// The technician supplies patient demographics and scan type.
-        /// </summary>
         [HttpPost]
+        [Authorize]
         [ProducesResponseType(typeof(ReportingRequestResponseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateRequest([FromBody] CreateReportingRequestDto dto)
         {
@@ -34,8 +34,14 @@ namespace HospitalRequestsAPI.Controllers
 
             try
             {
-                var result = await _service.CreateRequestAsync(dto);
+                var staffMemberId = GetStaffMemberIdFromToken();
+                var result = await _service.CreateRequestAsync(dto, staffMemberId);
                 return CreatedAtAction(nameof(GetRequestById), new { id = result.Id }, result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized request attempt");
+                return Unauthorized(new { message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -45,19 +51,23 @@ namespace HospitalRequestsAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// US-02: Get all reporting requests with their current statuses.
-        /// Allows the technician to track the progress of all submitted requests.
-        /// </summary>
         [HttpGet]
+        [Authorize]
         [ProducesResponseType(typeof(IEnumerable<ReportingRequestResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAllRequests()
         {
             try
             {
-                var results = await _service.GetAllRequestsAsync();
+                var staffMemberId = GetStaffMemberIdFromToken();
+                var results = await _service.GetAllRequestsAsync(staffMemberId);
                 return Ok(results);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized request attempt");
+                return Unauthorized(new { message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -72,19 +82,27 @@ namespace HospitalRequestsAPI.Controllers
         /// Allows the technician to check the real-time status of a specific request.
         /// </summary>
         [HttpGet("{id:guid}")]
+        [Authorize]
         [ProducesResponseType(typeof(ReportingRequestResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetRequestById(Guid id)
         {
             try
             {
-                var result = await _service.GetRequestByIdAsync(id);
-
-                if (result == null)
-                    return NotFound($"Reporting request with Id '{id}' was not found.");
-
+                var staffMemberId = GetStaffMemberIdFromToken();
+                var result = await _service.GetRequestByIdAsync(id, staffMemberId);
                 return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -92,6 +110,19 @@ namespace HospitalRequestsAPI.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError,
                     "An error occurred while fetching the reporting request.");
             }
+        }
+
+        private Guid GetStaffMemberIdFromToken()
+        {
+            var subClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                        ?? User.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrEmpty(subClaim) || !Guid.TryParse(subClaim, out var staffMemberId))
+            {
+                throw new UnauthorizedAccessException("Unable to extract staff member identity from token.");
+            }
+
+            return staffMemberId;
         }
     }
 }
