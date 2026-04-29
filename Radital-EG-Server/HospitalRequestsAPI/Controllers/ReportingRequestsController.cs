@@ -1,3 +1,4 @@
+using HospitalRequestsAPI.ExternalClients;
 using HospitalRequestsAppCore.DTOs;
 using HospitalRequestsAppCore.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -12,13 +13,16 @@ namespace HospitalRequestsAPI.Controllers
     {
         private readonly IReportingRequestsManagementService _service;
         private readonly ILogger<ReportingRequestsController> _logger;
+        private readonly IRadiologistApiClient _radiologistApi;
 
         public ReportingRequestsController(
             IReportingRequestsManagementService service,
-            ILogger<ReportingRequestsController> logger)
+            ILogger<ReportingRequestsController> logger,
+            IRadiologistApiClient radiologistApi)
         {
             _service = service;
             _logger = logger;
+            _radiologistApi = radiologistApi;
         }
 
         [HttpPost]
@@ -113,6 +117,40 @@ namespace HospitalRequestsAPI.Controllers
                 _logger.LogError(ex, "Error fetching reporting request {RequestId}", id);
                 return StatusCode(StatusCodes.Status500InternalServerError,
                     "An error occurred while fetching the reporting request.");
+            }
+        }
+
+        [HttpGet("{id:guid}/report/pdf")]
+        [Authorize]
+        [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DownloadReportPdf(Guid id, CancellationToken ct)
+        {
+            try
+            {
+                var staffMemberId = GetStaffMemberIdFromToken();
+                var request = await _service.GetRequestByIdAsync(id, staffMemberId);
+
+                if (request.ReportId is null)
+                    return NotFound(new { message = "No report has been generated for this request yet." });
+
+                var (pdfBytes, fileName) = await _radiologistApi.DownloadReportPdfAsync(request.ReportId.Value, ct);
+                return File(pdfBytes, "application/pdf", fileName);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error downloading PDF for reporting request {RequestId}", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while downloading the report.");
             }
         }
 

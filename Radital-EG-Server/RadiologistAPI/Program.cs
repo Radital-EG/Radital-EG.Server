@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using RadiologistAppCore;
+using RadiologistAppCore.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,12 +14,13 @@ builder.Services.AddAppCoreServices();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwtSection["Key"]!);
+var MyAllowSpecificOrigins = "_myAllowSpecificOriginsRadiologist";
 
 builder.Services
     .AddAuthentication(options =>
     {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultScheme = "JWT_OR_APIKEY";   
+        options.DefaultChallengeScheme = "JWT_OR_APIKEY";   
     })
     .AddJwtBearer(options =>
     {
@@ -35,10 +37,28 @@ builder.Services
             IssuerSigningKey = new SymmetricSecurityKey(key),
             ClockSkew = TimeSpan.Zero
         };
+    })
+    .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
+        ApiKeyAuthenticationOptions.Scheme, _ => { })
+    .AddPolicyScheme("JWT_OR_APIKEY", "JWT_OR_APIKEY", options =>
+    {
+        options.ForwardDefaultSelector = context =>
+        {
+            return context.Request.Headers.ContainsKey(ApiKeyAuthenticationOptions.HeaderName)
+                ? ApiKeyAuthenticationOptions.Scheme
+                : JwtBearerDefaults.AuthenticationScheme;
+        };
     });
 
-builder.Services.AddControllers();
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -66,6 +86,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors(MyAllowSpecificOrigins);
 app.UseAuthorization();
 app.MapControllers();
 

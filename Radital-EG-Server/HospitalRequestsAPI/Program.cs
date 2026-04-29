@@ -1,3 +1,4 @@
+using HospitalRequestsAPI.ExternalClients;
 using HospitalRequestsAppCore;
 using Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -13,6 +14,8 @@ builder.Services.AddAppCoreServices();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwtSection["Key"]!);
+var MyAllowSpecificOrigins = "_myAllowSpecificOriginsHospital";
+
 
 builder.Services
     .AddAuthentication(options =>
@@ -37,7 +40,22 @@ builder.Services
         };
     });
 
+builder.Services.AddHttpClient<IRadiologistApiClient, RadiologistApiClient>((sp, client) =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    client.BaseAddress = new Uri(config["RadiologistApi:BaseUrl"]!);
+    client.DefaultRequestHeaders.Add("X-Api-Key", config["RadiologistApi:ApiKey"]!);
+});
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 // ── ASP.NET Core ──────────────────────────────────────────────────────────────
 builder.Services.AddControllers();
 
@@ -67,6 +85,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors(MyAllowSpecificOrigins);
 app.UseAuthorization();
 app.MapControllers();
 

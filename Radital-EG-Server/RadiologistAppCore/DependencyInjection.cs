@@ -15,8 +15,9 @@ namespace RadiologistAppCore
         public static IServiceCollection AddAppCoreServices(this IServiceCollection services)
         {
             services.AddScoped<IAuthenticationService, AuthenticationService>();
+            services.AddScoped<IWorkloadManagementService, WorkloadManagementService>();
+            services.AddScoped<IReportingService, ReportingService>();
             services.AddScoped<IPasswordHasher<Radiologist>, PasswordHasher<Radiologist>>();
-
             return services;
         }
 
