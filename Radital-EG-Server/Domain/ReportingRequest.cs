@@ -13,11 +13,13 @@ namespace Domain
         public ReportingRequestStatusEnum Status { get; set; }
         public DateTime SubmissionTime { get; set; }
         public DateTime DueDate { get; set; }
+
+        public DateTime? CompletionTime { get; set; }
         public PrioritiesEnum Priority { get; set; }
-        public Radiologist AssignedRadiologist { get; set; }
+        public Radiologist? AssignedRadiologist { get; set; }
         public Guid? ReportId { get; set; }
         public Report? Report { get; set; }
         public bool IsEmergency { get; set; }
-        public string EmergencyJustification { get; set; }
+        public string? EmergencyJustification { get; set; }
     }
 }

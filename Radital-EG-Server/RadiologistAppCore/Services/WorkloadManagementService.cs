@@ -198,7 +198,7 @@ namespace RadiologistAppCore.Services
             {
                 RadiologistId          = radiologist.Id,
                 RadiologistName        = radiologist.Name ?? string.Empty,
-                Specialty              = radiologist.Specialty ?? string.Empty,
+                Specialty              = radiologist.Speciality.ToString() ?? string.Empty,
                 CurrentQueueSize       = activeCount,
                 AverageTurnaroundHours = avgTurnaroundHours.HasValue
                                              ? Math.Round(avgTurnaroundHours.Value, 2)
@@ -220,13 +220,14 @@ namespace RadiologistAppCore.Services
         /// </summary>
         private static double CalculateSpecialtyScore(Radiologist rad, ReportingRequest req)
         {
-            if (string.IsNullOrWhiteSpace(rad.Specialty))
+            string radiologistSpeciality = rad.Speciality.ToString();
+            if (string.IsNullOrWhiteSpace(radiologistSpeciality))
                 return MatchScoreWeights.NoSpecialtyScore;
 
             // Exact match against the suggested department
             if (!string.IsNullOrWhiteSpace(req.SuggestedDepartment) &&
                 string.Equals(
-                    rad.Specialty.Trim(),
+                    radiologistSpeciality.Trim(),
                     req.SuggestedDepartment.Trim(),
                     StringComparison.OrdinalIgnoreCase))
             {
@@ -238,8 +239,8 @@ namespace RadiologistAppCore.Services
             var department   = req.SuggestedDepartment ?? string.Empty;
 
             bool isRelated =
-                department.Contains(rad.Specialty,   StringComparison.OrdinalIgnoreCase) ||
-                modalityName.Contains(rad.Specialty, StringComparison.OrdinalIgnoreCase);
+                department.Contains(radiologistSpeciality,   StringComparison.OrdinalIgnoreCase) ||
+                modalityName.Contains(radiologistSpeciality, StringComparison.OrdinalIgnoreCase);
 
             return isRelated
                 ? MatchScoreWeights.RelatedSpecialtyScore

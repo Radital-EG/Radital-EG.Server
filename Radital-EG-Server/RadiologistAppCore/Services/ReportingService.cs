@@ -82,6 +82,7 @@ namespace RadiologistAppCore.Services
             request.Report = report;
             request.ReportId = report.Id;
             request.Status = ReportingRequestStatusEnum.Completed;
+            request.CompletionTime = DateTime.Now;
 
             await _requestRepository.UpdateAsync(request);
             await _requestRepository.CommitAsync(Guid.Empty);
