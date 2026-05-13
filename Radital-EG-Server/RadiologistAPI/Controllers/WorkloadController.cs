@@ -1,4 +1,4 @@
-﻿using Domain;
+using Domain;
 using RadiologistAppCore.DTOs;
 using RadiologistAppCore.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -20,8 +20,12 @@ namespace RadiologistAPI.Controllers
             ILogger<WorkloadController> logger)
         {
             _service = service;
-            _logger = logger;
+            _logger  = logger;
         }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Existing endpoints
+        // ─────────────────────────────────────────────────────────────────────
 
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<RadiologistRequestResponseDto>), StatusCodes.Status200OK)]
@@ -107,6 +111,51 @@ namespace RadiologistAPI.Controllers
                     "An error occurred while updating the request status.");
             }
         }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // US-16 – Doctor Match Score
+        // ─────────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// GET api/workload/{id}/doctor-match-scores
+        ///
+        /// Returns a ranked list of available radiologists with their real-time
+        /// match scores for the specified reporting request.
+        ///
+        /// Score components:
+        ///   - Specialty alignment  (50 %)
+        ///   - Current queue size   (30 %)
+        ///   - Historical turnaround (20 %)
+        ///
+        /// Results are sorted by OverallScore descending (best match first).
+        /// </summary>
+        [HttpGet("{id:guid}/doctor-match-scores")]
+        [ProducesResponseType(typeof(IEnumerable<DoctorMatchScoreDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetDoctorMatchScores(Guid id)
+        {
+            try
+            {
+                var scores = await _service.GetDoctorMatchScoresAsync(id);
+                return Ok(scores);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating doctor match scores for request {RequestId}", id);
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    "An error occurred while calculating doctor match scores.");
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Private helpers
+        // ─────────────────────────────────────────────────────────────────────
 
         private Guid GetRadiologistIdFromToken()
         {

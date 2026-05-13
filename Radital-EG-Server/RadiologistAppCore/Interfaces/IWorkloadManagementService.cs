@@ -1,4 +1,4 @@
-﻿using RadiologistAppCore.DTOs;
+using RadiologistAppCore.DTOs;
 
 namespace RadiologistAppCore.Interfaces
 {
@@ -23,5 +23,21 @@ namespace RadiologistAppCore.Interfaces
         /// </summary>
         Task<RadiologistRequestResponseDto> UpdateRequestStatusAsync(
             Guid requestId, Guid radiologistId, Domain.ReportingRequestStatusEnum newStatus);
+
+        /// <summary>
+        /// Calculates a real-time match score for every available radiologist
+        /// relative to the given reporting request.
+        /// <para>
+        /// The composite score (0–100) is a weighted sum of:
+        /// <list type="bullet">
+        ///   <item>Specialty alignment  – 50 %</item>
+        ///   <item>Current queue size   – 30 %</item>
+        ///   <item>Historical turnaround – 20 %</item>
+        /// </list>
+        /// </para>
+        /// Results are returned in descending score order (best match first).
+        /// Throws <see cref="KeyNotFoundException"/> if the request is not found.
+        /// </summary>
+        Task<IEnumerable<DoctorMatchScoreDto>> GetDoctorMatchScoresAsync(Guid requestId);
     }
 }
