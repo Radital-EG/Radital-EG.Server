@@ -6,6 +6,7 @@ namespace HospitalRequestsAPI.ExternalClients
     public interface IRadiologistApiClient
     {
         Task<(byte[] Content, string FileName)> DownloadReportPdfAsync(Guid reportId, CancellationToken ct = default);
+        Task NotifyEmergencyAsync(Guid requestId, Guid radiologistId, CancellationToken ct = default);
     }
 
     public class RadiologistApiClient : IRadiologistApiClient
@@ -90,6 +91,12 @@ namespace HospitalRequestsAPI.ExternalClients
             }
 
             return body;
+        }
+        public async Task NotifyEmergencyAsync(Guid requestId, Guid radiologistId, CancellationToken ct = default)
+        {
+            var response = await _httpClient.PostAsync(
+                $"api/workload/{requestId}/notify-emergency/{radiologistId}", null, ct);
+            response.EnsureSuccessStatusCode();
         }
     }
 }

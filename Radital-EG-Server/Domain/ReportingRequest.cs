@@ -21,5 +21,7 @@ namespace Domain
         public Report? Report { get; set; }
         public bool IsEmergency { get; set; }
         public string? EmergencyJustification { get; set; }
+        public DateTime? AssignedAt { get; set; }          
+        public List<Guid> EscalationHistory { get; set; } = new(); 
     }
 }

@@ -93,6 +93,7 @@ namespace HospitalRequestsAppCore.Services
                 Priority = dto.Priority,
                 IsEmergency = dto.IsEmergency,
                 AssignedRadiologist = assignedRadiologist,
+                AssignedAt = DateTime.UtcNow,
                 EmergencyJustification = dto.EmergencyJustification
             };
             await _requestRepository.InsertAsync(reportingRequest);

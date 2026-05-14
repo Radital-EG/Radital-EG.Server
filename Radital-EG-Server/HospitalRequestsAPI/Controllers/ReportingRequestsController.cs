@@ -40,6 +40,21 @@ namespace HospitalRequestsAPI.Controllers
             {
                 var staffMemberId = GetStaffMemberIdFromToken();
                 var result = await _service.CreateRequestAsync(dto, staffMemberId);
+
+                // ── If emergency, notify the assigned radiologist via RadiologistAPI ──
+                if (dto.IsEmergency && result.AssignedRadiologistId.HasValue)
+                {
+                    try
+                    {
+                        await _radiologistApi.NotifyEmergencyAsync(result.Id, result.AssignedRadiologistId.Value);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Don't fail the whole request if notification fails — log and continue
+                        _logger.LogError(ex, "Failed to send emergency SignalR notification for request {RequestId}", result.Id);
+                    }
+                }
+
                 return CreatedAtAction(nameof(GetRequestById), new { id = result.Id }, result);
             }
             catch (UnauthorizedAccessException ex)

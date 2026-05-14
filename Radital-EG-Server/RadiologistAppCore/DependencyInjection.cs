@@ -18,6 +18,7 @@ namespace RadiologistAppCore
             services.AddScoped<IWorkloadManagementService, WorkloadManagementService>();
             services.AddScoped<IReportingService, ReportingService>();
             services.AddScoped<IPasswordHasher<Radiologist>, PasswordHasher<Radiologist>>();
+            services.AddHostedService<EmergencyEscalationService>();
             return services;
         }
 

@@ -4,6 +4,8 @@ using RadiologistAppCore.DTOs;
 using RadiologistAppCore.Interfaces;
 using Infrastructure.Interfaces;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.SignalR;
+using RadiologistAppCore.Hubs;
 
 namespace RadiologistAppCore.Services
 {
@@ -35,15 +37,18 @@ namespace RadiologistAppCore.Services
         private readonly IRepository<ReportingRequest> _requestRepository;
         private readonly IRepository<Radiologist>      _radiologistRepository;
         private readonly ILogger<WorkloadManagementService> _logger;
+        private readonly IHubContext<RadiologistHub> _hubContext;
 
         public WorkloadManagementService(
             IRepository<ReportingRequest> requestRepository,
             IRepository<Radiologist>      radiologistRepository,
-            ILogger<WorkloadManagementService> logger)
+            ILogger<WorkloadManagementService> logger,
+            IHubContext<RadiologistHub> hubContext)
         {
             _requestRepository     = requestRepository;
             _radiologistRepository = radiologistRepository;
             _logger                = logger;
+            _hubContext = hubContext;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -109,6 +114,49 @@ namespace RadiologistAppCore.Services
             return MapToResponseDto(request);
         }
 
+        public async Task AssignEmergencyRequestAsync(Guid requestId, Guid radiologistId)
+        {
+            var request = await _requestRepository.GetByIdNestedSearchAsync(requestId, maxLevel: 2);
+            if (request is null) throw new KeyNotFoundException("Request not found.");
+
+            request.AssignedRadiologist = await _radiologistRepository.GetByIdAsync(radiologistId)
+                ?? throw new KeyNotFoundException("Radiologist not found.");
+            request.AssignedAt = DateTime.UtcNow;
+            request.Status = ReportingRequestStatusEnum.Pending;
+
+            await _requestRepository.UpdateAsync(request);
+            await _requestRepository.CommitAsync(Guid.Empty);
+
+            // Push to the assigned radiologist's SignalR group immediately
+            await _hubContext.Clients
+                .Group($"radiologist-{radiologistId}")
+                .SendAsync("EmergencyAssigned", new
+                {
+                    RequestId = request.Id,
+                    PatientName = request.Image?.Patient?.Name,
+                    Modality = request.Image?.ImageModality.ToString(),
+                    EmergencyJustification = request.EmergencyJustification,
+                    AssignedAt = request.AssignedAt,
+                    DeadlineUtc = request.AssignedAt.Value.AddMinutes(5)
+                });
+        }
+
+        public async Task<RadiologistRequestResponseDto> AcceptRequestAsync(Guid requestId, Guid radiologistId)
+        {
+            var request = await _requestRepository.GetByIdNestedSearchAsync(requestId, maxLevel: 2);
+            if (request is null) throw new KeyNotFoundException("Request not found.");
+            if (request.AssignedRadiologist?.Id != radiologistId)
+                throw new UnauthorizedAccessException("Not assigned to you.");
+
+            request.Status = ReportingRequestStatusEnum.InProgress;
+            request.AssignedAt = null; // accepted — stop the escalation clock
+
+            await _requestRepository.UpdateAsync(request);
+            await _requestRepository.CommitAsync(Guid.Empty);
+
+            return MapToResponseDto(request);
+        }
+
         // ─────────────────────────────────────────────────────────────────────
         // US-16 – Doctor Match Score
         // ─────────────────────────────────────────────────────────────────────
@@ -145,7 +193,6 @@ namespace RadiologistAppCore.Services
 
             return scores;
         }
-
         // ─────────────────────────────────────────────────────────────────────
         // Scoring helpers
         // ─────────────────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using RadiologistAppCore;
+using RadiologistAppCore.Hubs;
 using RadiologistAppCore.Services;
 using System.Text;
 
@@ -52,13 +53,15 @@ builder.Services
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
+    options.AddPolicy("AllowAngular", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:4200")
+              .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowCredentials(); // ← this is what's missing
     });
 });
+builder.Services.AddSignalR();
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -86,7 +89,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors(MyAllowSpecificOrigins);
+app.UseCors("AllowAngular"); // ← must be before MapHub
+app.MapHub<RadiologistHub>("/hubs/radiologist"); 
 app.UseAuthorization();
 app.MapControllers();
 

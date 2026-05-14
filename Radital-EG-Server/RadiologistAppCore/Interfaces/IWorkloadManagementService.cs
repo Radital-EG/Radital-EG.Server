@@ -39,5 +39,10 @@ namespace RadiologistAppCore.Interfaces
         /// Throws <see cref="KeyNotFoundException"/> if the request is not found.
         /// </summary>
         Task<IEnumerable<DoctorMatchScoreDto>> GetDoctorMatchScoresAsync(Guid requestId);
+
+        Task<RadiologistRequestResponseDto> AcceptRequestAsync(Guid requestId, Guid radiologistId);
+
+        Task AssignEmergencyRequestAsync(Guid requestId, Guid radiologistId);
+
     }
 }

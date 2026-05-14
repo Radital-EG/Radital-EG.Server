@@ -105,6 +105,20 @@ namespace Infrastructure
                       .WithMany()
                       .IsRequired(true)
                       .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(r => r.EscalationHistory)
+                      .HasConversion(
+                          v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions)null),
+                          v => string.IsNullOrWhiteSpace(v)   // ← handle empty string from existing rows
+                              ? new List<Guid>()
+                              : System.Text.Json.JsonSerializer.Deserialize<List<Guid>>(v, (System.Text.Json.JsonSerializerOptions)null) ?? new List<Guid>()
+                      )
+                      .HasColumnType("longtext")
+                      .Metadata.SetValueComparer(new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<List<Guid>>(
+                          (c1, c2) => c1.SequenceEqual(c2),
+                          c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                          c => c.ToList()
+                      ));
             });
         }
     }
